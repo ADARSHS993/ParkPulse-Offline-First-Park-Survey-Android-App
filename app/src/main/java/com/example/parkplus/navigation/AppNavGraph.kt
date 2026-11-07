@@ -10,6 +10,7 @@ import com.example.parkplus.presentation.addpark.AddParkScreen
 import com.example.parkplus.presentation.auth.LoginScreen
 import com.example.parkplus.presentation.parks.ParksScreen
 import com.example.parkplus.presentation.map.MapScreen
+import com.example.parkplus.presentation.survey.SurveyDetailsScreen
 import com.example.parkplus.presentation.survey.SurveyScreen
 
 @Composable
@@ -77,6 +78,20 @@ fun AppNavGraph() {
             SurveyScreen(
                 onSurveyStarted = { surveyId ->
                     navController.navigate("survey_details/$surveyId")
+                }
+            )
+        }
+
+        composable("survey_details/{surveyId}") { backStackEntry ->
+
+            SurveyDetailsScreen(
+                onSurveySaved = {
+                    navController.navigate(AppRoute.Parks.route) {
+                        popUpTo(AppRoute.Parks.route) {
+                            inclusive = false
+                        }
+                        launchSingleTop = true
+                    }
                 }
             )
         }

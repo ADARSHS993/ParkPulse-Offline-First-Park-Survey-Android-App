@@ -22,6 +22,10 @@ class SurveyRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun getSurveyById(surveyId: String): Survey? {
+        return surveyDao.getSurveyById(surveyId)?.toDomain()
+    }
+
     override suspend fun saveSurvey(survey: Survey) {
         surveyDao.insertSurvey(survey.toEntity())
     }
