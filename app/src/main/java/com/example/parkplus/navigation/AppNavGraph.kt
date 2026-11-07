@@ -6,6 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.parkplus.presentation.addpark.AddParkScreen
 import com.example.parkplus.presentation.auth.LoginScreen
 import com.example.parkplus.presentation.parks.ParksScreen
 import com.example.parkplus.presentation.map.MapScreen
@@ -51,7 +52,19 @@ fun AppNavGraph() {
                 }
             )
         ) {
-            MapScreen()
+            MapScreen(onAddPark = {
+                navController.navigate(AppRoute.AddPark.route)
+            })
         }
+
+        composable(AppRoute.AddPark.route) {
+            AddParkScreen(
+                onParkSaved = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+
     }
 }

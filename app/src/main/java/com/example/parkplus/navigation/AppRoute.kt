@@ -8,4 +8,6 @@ sealed class AppRoute(val route: String){
 
     data object Map : AppRoute("map")
 
+    data object AddPark : AppRoute("add_park")
+
 }
