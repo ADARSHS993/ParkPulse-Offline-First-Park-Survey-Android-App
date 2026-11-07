@@ -10,6 +10,7 @@ import com.example.parkplus.presentation.addpark.AddParkScreen
 import com.example.parkplus.presentation.auth.LoginScreen
 import com.example.parkplus.presentation.parks.ParksScreen
 import com.example.parkplus.presentation.map.MapScreen
+import com.example.parkplus.presentation.survey.SurveyScreen
 
 @Composable
 fun AppNavGraph() {
@@ -73,7 +74,11 @@ fun AppNavGraph() {
                 }
             )
         ) {
-            SurveyScreen()
+            SurveyScreen(
+                onSurveyStarted = { surveyId ->
+                    navController.navigate("survey_details/$surveyId")
+                }
+            )
         }
 
 
