@@ -10,4 +10,6 @@ sealed class AppRoute(val route: String){
 
     data object AddPark : AppRoute("add_park")
 
+    data object Survey : AppRoute("survey")
+
 }

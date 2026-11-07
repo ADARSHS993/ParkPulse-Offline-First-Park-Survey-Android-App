@@ -65,6 +65,17 @@ fun AppNavGraph() {
             )
         }
 
+        composable(
+            route = "survey/{parkId}",
+            arguments = listOf(
+                navArgument("parkId") {
+                    type = NavType.StringType
+                }
+            )
+        ) {
+            SurveyScreen()
+        }
+
 
     }
 }
