@@ -1,12 +1,15 @@
 package com.example.parkplus.data.local.dao
 
+import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.example.parkplus.data.local.entity.PhotoEntity
 import kotlinx.coroutines.flow.Flow
 
+@Dao
 interface PhotoDao {
+
     @Query("""
         SELECT * FROM photos
         WHERE surveyId = :surveyId
