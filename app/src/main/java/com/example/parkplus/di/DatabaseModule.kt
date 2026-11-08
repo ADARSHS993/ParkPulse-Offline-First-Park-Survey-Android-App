@@ -8,10 +8,13 @@ import com.example.parkplus.data.local.dao.SurveyDao
 import com.example.parkplus.data.local.database.database
 import dagger.Module
 import dagger.Provides
+import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
-import jakarta.inject.Singleton
+import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
 
 @Module
+@InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
     @Provides

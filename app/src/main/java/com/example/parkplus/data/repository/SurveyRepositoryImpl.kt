@@ -35,4 +35,8 @@ class SurveyRepositoryImpl @Inject constructor(
             it.toDomain()
         }
     }
+
+    override suspend fun markSurveySynced(surveyId: String) {
+        surveyDao.markSurveySynced(surveyId)
+    }
 }

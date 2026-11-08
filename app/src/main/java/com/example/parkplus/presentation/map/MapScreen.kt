@@ -1,3 +1,4 @@
+
 package com.example.parkplus.presentation.map
 
 import android.Manifest
@@ -36,8 +37,10 @@ import org.osmdroid.views.overlay.Polygon
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(
+    parkId: String,
     viewModel: MapViewModel = hiltViewModel(),
-    onAddPark: () -> Unit
+    onAddPark: () -> Unit,
+    onStartSurvey: (String) -> Unit
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -75,6 +78,7 @@ fun MapScreen(
                     permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
     }
 
+    // Initialize map.
     val mapView = remember {
         Configuration.getInstance().userAgentValue =
             context.packageName
@@ -83,10 +87,37 @@ fun MapScreen(
             setTileSource(TileSourceFactory.MAPNIK)
             setMultiTouchControls(true)
             controller.setZoom(12.0)
-            controller.setCenter(OsmGeoPoint(21.1702, 72.8311))
+            controller.setCenter(
+                OsmGeoPoint(21.1702, 72.8311)
+            )
         }
     }
 
+    // Focus on the selected park when its data is loaded.
+
+    LaunchedEffect(parkId, state.parks) {
+
+        val selected = state.parks.firstOrNull {
+            it.id == parkId
+        }
+
+        if (selected != null && selected.boundary.size >= 3) {
+
+            val center = getParkCenter(selected)
+
+            mapView.controller.animateTo(
+                OsmGeoPoint(
+                    center.latitude,
+                    center.longitude
+                )
+            )
+
+            mapView.controller.setZoom(17.0)
+        }
+    }
+
+
+    // Request location updates only after permission is granted.
     DisposableEffect(hasLocationPermission) {
         if (!hasLocationPermission) {
             onDispose { }
@@ -94,10 +125,14 @@ fun MapScreen(
             val request = LocationRequest.Builder(
                 Priority.PRIORITY_HIGH_ACCURACY,
                 5000L
-            ).setMinUpdateIntervalMillis(3000L).build()
+            )
+                .setMinUpdateIntervalMillis(3000L)
+                .build()
 
             val callback = object : LocationCallback() {
-                override fun onLocationResult(result: LocationResult) {
+                override fun onLocationResult(
+                    result: LocationResult
+                ) {
                     currentLocation = result.lastLocation
                 }
             }
@@ -111,9 +146,10 @@ fun MapScreen(
                         context.mainLooper
                     )
                 }
+
                 startUpdates()
             } catch (_: SecurityException) {
-                // Permission may have been revoked while the screen was open.
+                // Permission may have been revoked.
             }
 
             onDispose {
@@ -122,68 +158,110 @@ fun MapScreen(
         }
     }
 
-    // Draw the latest park polygons on the map.
+    // Draw park polygons, location marker and map tap listener.
+
     LaunchedEffect(state.parks, currentLocation) {
+
         mapView.overlays.clear()
 
         state.parks.forEach { park ->
+
             if (park.boundary.size >= 3) {
+
+                // Draw colored park boundary.
                 val polygon = Polygon(mapView).apply {
+
                     points = park.boundary.map {
-                        OsmGeoPoint(it.latitude, it.longitude)
+                        OsmGeoPoint(
+                            it.latitude,
+                            it.longitude
+                        )
                     }
 
+                    // Stronger transparent fill.
                     fillPaint.color = when (park.status) {
                         ParkStatus.OPEN ->
-                            android.graphics.Color.argb(65, 46, 160, 67)
+                            android.graphics.Color.argb(110, 46, 160, 67)
 
                         ParkStatus.NEEDS_REPAIR ->
-                            android.graphics.Color.argb(75, 255, 165, 0)
+                            android.graphics.Color.argb(110, 255, 165, 0)
 
                         ParkStatus.CLOSED ->
-                            android.graphics.Color.argb(75, 220, 40, 40)
+                            android.graphics.Color.argb(110, 220, 40, 40)
                     }
 
+                    // Thick colored outline.
                     outlinePaint.color = when (park.status) {
                         ParkStatus.OPEN ->
-                            android.graphics.Color.rgb(46, 160, 67)
+                            android.graphics.Color.rgb(20, 120, 40)
 
                         ParkStatus.NEEDS_REPAIR ->
-                            android.graphics.Color.rgb(255, 165, 0)
+                            android.graphics.Color.rgb(220, 125, 0)
 
                         ParkStatus.CLOSED ->
-                            android.graphics.Color.rgb(220, 40, 40)
+                            android.graphics.Color.rgb(190, 20, 20)
                     }
 
-                    outlinePaint.strokeWidth = 4f
+                    outlinePaint.strokeWidth = 7f
                 }
 
                 mapView.overlays.add(polygon)
+
+                // Add park name marker at the approximate center.
+                val center = getParkCenter(park)
+
+                val parkMarker = Marker(mapView).apply {
+
+                    position = OsmGeoPoint(
+                        center.latitude,
+                        center.longitude
+                    )
+
+                    title = park.name
+
+                    snippet =
+                        "${park.status.name.replace('_', ' ')} • " +
+                                "${"%.2f".format(park.areaSquareMeters)} m²"
+
+                    setAnchor(
+                        Marker.ANCHOR_CENTER,
+                        Marker.ANCHOR_BOTTOM
+                    )
+                }
+
+                mapView.overlays.add(parkMarker)
             }
         }
 
+        // Current user location.
         currentLocation?.let { location ->
+
             val userMarker = Marker(mapView).apply {
+
                 position = OsmGeoPoint(
                     location.latitude,
                     location.longitude
                 )
+
                 title = "My Location"
+
                 setAnchor(
                     Marker.ANCHOR_CENTER,
                     Marker.ANCHOR_BOTTOM
                 )
             }
+
             mapView.overlays.add(userMarker)
         }
 
-        // Detect taps on a park polygon.
+        // Detect park polygon taps.
         val tapOverlay = MapEventsOverlay(
             object : MapEventsReceiver {
 
                 override fun singleTapConfirmedHelper(
                     point: OsmGeoPoint
                 ): Boolean {
+
                     selectedPark = state.parks.firstOrNull { park ->
                         isPointInsidePolygon(
                             point.latitude,
@@ -191,18 +269,21 @@ fun MapScreen(
                             park
                         )
                     }
+
                     return selectedPark != null
                 }
 
                 override fun longPressHelper(
                     point: OsmGeoPoint
-                ) = false
+                ): Boolean = false
             }
         )
 
         mapView.overlays.add(tapOverlay)
+
         mapView.invalidate()
     }
+
 
     DisposableEffect(mapView) {
         onDispose {
@@ -227,65 +308,112 @@ fun MapScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Button(
-                    onClick = {
-                        if (hasLocationPermission) {
-                            currentLocation?.let { location ->
-                                mapView.controller.animateTo(
-                                    OsmGeoPoint(
-                                        location.latitude,
-                                        location.longitude
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+
+                    Button(
+                        onClick = {
+                            if (hasLocationPermission) {
+                                currentLocation?.let { location ->
+
+                                    mapView.controller.animateTo(
+                                        OsmGeoPoint(
+                                            location.latitude,
+                                            location.longitude
+                                        )
+                                    )
+
+                                    mapView.controller.setZoom(16.0)
+                                }
+                            } else {
+                                permissionLauncher.launch(
+                                    arrayOf(
+                                        Manifest.permission.ACCESS_FINE_LOCATION,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION
                                     )
                                 )
                             }
-                        } else {
-                            permissionLauncher.launch(
-                                arrayOf(
-                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                    Manifest.permission.ACCESS_COARSE_LOCATION
-                                )
-                            )
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("My Location")
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("My Location")
+                    }
+
+                    OutlinedButton(
+                        onClick = onAddPark,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Add Park +")
+                    }
                 }
 
                 if (!hasLocationPermission) {
                     Text(
                         text = "Location permission is needed to show your position.",
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
-                if (state.error != null) {
-                    Text(state.error ?: "")
+                if (state.isLoading) {
+                    LinearProgressIndicator(
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                state.error?.let { error ->
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
             }
         }
     }
 
+    // Park details bottom sheet.
     selectedPark?.let { park ->
+
         ModalBottomSheet(
-            onDismissRequest = { selectedPark = null }
+            onDismissRequest = {
+                selectedPark = null
+            }
         ) {
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp)
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+
                 Text(
                     text = park.name,
                     style = MaterialTheme.typography.titleLarge
                 )
 
-                Text("Area: ${park.areaSquareMeters} m²")
-                Text("Status: ${park.status.name.replace('_', ' ')}")
+                Text(
+                    "Type: ${park.type.name.replace('_', ' ')}"
+                )
+
+                Text(
+                    "Area: %.2f m²".format(
+                        park.areaSquareMeters
+                    )
+                )
+
+                Text(
+                    "Status: ${park.status.name.replace('_', ' ')}"
+                )
 
                 currentLocation?.let { user ->
+
                     val center = getParkCenter(park)
 
                     val destination = Location("park").apply {
@@ -300,14 +428,27 @@ fun MapScreen(
                         "Distance: ${distance.toInt()} m, " +
                                 compassDirection(bearing)
                     )
-                } ?: Text("Enable location to see distance and direction.")
 
-                Spacer(Modifier.height(20.dp))
+                } ?: Text(
+                    "Enable location to see distance and direction."
+                )
+
+                Button(
+                    onClick = {
+                        onStartSurvey(park.id)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Start Survey")
+                }
+
+                Spacer(Modifier.height(12.dp))
             }
         }
     }
 }
 
+// Check whether a coordinate is inside a park boundary.
 fun isPointInsidePolygon(
     latitude: Double,
     longitude: Double,
@@ -331,8 +472,8 @@ fun isPointInsidePolygon(
 
         val intersects =
             ((yi > latitude) != (yj > latitude)) &&
-                    (longitude < (xj - xi) * (latitude - yi) /
-                            (yj - yi) + xi)
+                    (longitude < (xj - xi) *
+                            (latitude - yi) / (yj - yi) + xi)
 
         if (intersects) {
             inside = !inside

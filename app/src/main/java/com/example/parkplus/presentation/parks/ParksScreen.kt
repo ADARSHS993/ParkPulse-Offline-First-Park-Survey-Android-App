@@ -1,29 +1,48 @@
+
 package com.example.parkplus.presentation.parks
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.parkplus.domain.ParkStatus
 import com.example.parkplus.domain.model.Park
+import com.example.parkplus.presentation.sync.SyncViewModel
+import java.text.DateFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ParksScreen(
     onOpenMap: (String) -> Unit,
-    viewModel: ParksViewModel = hiltViewModel()
+    onAddPark: () -> Unit,
+    viewModel: ParksViewModel = hiltViewModel(),
+    syncViewModel: SyncViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val syncState by syncViewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(onClick = onAddPark) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add Park"
+                )
+            }
+        },
         topBar = {
-            TopAppBar(title = { Text("ParkPulse") })
+            TopAppBar(
+                title = { Text("ParkPulse") }
+            )
         }
     ) { padding ->
 
@@ -33,6 +52,7 @@ fun ParksScreen(
                 .padding(padding)
                 .padding(16.dp)
         ) {
+
             OutlinedTextField(
                 value = state.searchQuery,
                 onValueChange = viewModel::onSearchChange,
@@ -43,12 +63,16 @@ fun ParksScreen(
 
             Spacer(Modifier.height(12.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 FilterChip(
                     selected = state.selectedStatus == null,
                     onClick = { viewModel.onStatusChange(null) },
                     label = { Text("All") }
                 )
+
                 FilterChip(
                     selected = state.selectedStatus == ParkStatus.OPEN,
                     onClick = {
@@ -56,6 +80,7 @@ fun ParksScreen(
                     },
                     label = { Text("Open") }
                 )
+
                 FilterChip(
                     selected = state.selectedStatus == ParkStatus.NEEDS_REPAIR,
                     onClick = {
@@ -63,6 +88,7 @@ fun ParksScreen(
                     },
                     label = { Text("Repair") }
                 )
+
                 FilterChip(
                     selected = state.selectedStatus == ParkStatus.CLOSED,
                     onClick = {
@@ -74,21 +100,97 @@ fun ParksScreen(
 
             Spacer(Modifier.height(12.dp))
 
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = "Offline Sync",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+
+                        Text(
+                            text = syncState.message ?: "Ready to sync",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+
+                        if (
+                            syncState.parksSynced > 0 ||
+                            syncState.surveysSynced > 0 ||
+                            syncState.photosSynced > 0
+                        ) {
+                            Text(
+                                text = "Parks: ${syncState.parksSynced} | " +
+                                        "Surveys: ${syncState.surveysSynced} | " +
+                                        "Photos: ${syncState.photosSynced}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+
+                        if (syncState.failed > 0) {
+                            Text(
+                                text = "Failed: ${syncState.failed}",
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+
+                    Button(
+                        onClick = syncViewModel::syncNow,
+                        enabled = !syncState.isSyncing
+                    ) {
+                        if (syncState.isSyncing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("Sync Now")
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
             when {
                 state.isLoading -> {
-                    CircularProgressIndicator()
+                    Box(
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
                 }
 
                 state.error != null -> {
-                    Text(state.error ?: "Something went wrong")
+                    Text(
+                        text = state.error ?: "Something went wrong",
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
 
                 state.parks.isEmpty() -> {
-                    Text("No parks found")
+                    Box(
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No parks found")
+                    }
                 }
 
                 else -> {
                     LazyColumn(
+                        modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(
@@ -117,7 +219,9 @@ private fun ParkCard(
             .fillMaxWidth()
             .clickable(onClick = onClick)
     ) {
-        Column(Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
             Text(
                 text = park.name,
                 style = MaterialTheme.typography.titleMedium
@@ -125,27 +229,37 @@ private fun ParkCard(
 
             Spacer(Modifier.height(4.dp))
 
-            Text("Type: ${park.type.name.replace('_', ' ')}")
+            Text(
+                text = "Type: ${park.type.name.replace('_', ' ')}"
+            )
 
             Text(
-                "Area: ${
+                text = "Area: ${
                     "%.2f".format(
                         park.areaSquareMeters / 4046.856
                     )
                 } acres"
             )
 
-            Text("Status: ${park.status.name.replace('_', ' ')}")
+            Text(
+                text = "Status: ${park.status.name.replace('_', ' ')}"
+            )
 
             park.lastSurveyDate?.let {
-                Text("Last survey: ${java.text.DateFormat.getDateInstance().format(it)}")
+                Text(
+                    text = "Last survey: ${
+                        DateFormat.getDateInstance().format(it)
+                    }"
+                )
             } ?: Text("Last survey: Not surveyed")
 
             if (park.isPendingSync) {
                 Spacer(Modifier.height(6.dp))
+
                 Text(
                     text = "Pending sync",
-                    color = MaterialTheme.colorScheme.error
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.labelMedium
                 )
             }
 

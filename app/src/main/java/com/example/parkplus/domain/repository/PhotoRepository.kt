@@ -9,4 +9,6 @@ interface PhotoRepository {
     suspend fun getPhotosBySurvey(surveyId: String): Flow<List<PhotoRecord>>
 
     suspend fun getPendingPhotos(): List<PhotoRecord>
+
+    suspend fun markPhotoSynced(photoId: String)
 }

@@ -12,4 +12,6 @@ interface SurveyRepository {
     fun getSurveysByPark(parkId: String): Flow<List<Survey>>
 
     suspend fun getSurveyById(surveyId: String): Survey?
+
+    suspend fun markSurveySynced(surveyId: String)
 }

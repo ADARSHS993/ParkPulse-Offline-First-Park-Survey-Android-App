@@ -16,7 +16,7 @@ import com.example.parkplus.data.local.entity.SurveyEntity
         PhotoEntity::class
     ],
     version = 1,
-    exportSchema = true
+    exportSchema = false
 )
 abstract class database : RoomDatabase() {
 

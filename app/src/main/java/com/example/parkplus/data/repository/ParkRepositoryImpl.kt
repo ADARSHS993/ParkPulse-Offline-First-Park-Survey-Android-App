@@ -45,4 +45,11 @@ class ParkRepositoryImpl @Inject constructor(
     override suspend fun deletePark(id: String) {
         parkDao.deletePark(id)
     }
+
+    override suspend fun getPendingParks(): List<Park> { return parkDao.getPendingParks().map { it.toDomain() }
+    }
+
+    override suspend fun markParkSynced(parkId: String) {
+        parkDao.markParkSynced(parkId)
+    }
 }

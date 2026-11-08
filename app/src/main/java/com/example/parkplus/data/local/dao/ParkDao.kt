@@ -7,6 +7,12 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ParkDao {
 
+    @Query("SELECT * FROM parks WHERE isPendingSync = 1")
+    suspend fun getPendingParks(): List<ParkEntity>
+
+    @Query("UPDATE parks SET isPendingSync = 0 WHERE id = :parkId")
+    suspend fun markParkSynced(parkId: String)
+
     @Query("SELECT * FROM parks ORDER BY name ASC")
     fun getAllParks(): Flow<List<ParkEntity>>
 

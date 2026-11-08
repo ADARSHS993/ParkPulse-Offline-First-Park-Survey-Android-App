@@ -22,4 +22,8 @@ interface ParkRepository {
 
     suspend fun deletePark(id: String)
 
+    suspend fun getPendingParks(): List<Park>
+
+    suspend fun markParkSynced(parkId: String)
+
 }

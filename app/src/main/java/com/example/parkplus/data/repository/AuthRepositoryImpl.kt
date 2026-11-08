@@ -2,8 +2,8 @@ package com.example.parkplus.data.repository
 
 import com.example.parkplus.data.local.preferences.SessionManager
 import com.example.parkplus.domain.repository.AuthRepository
-import jakarta.inject.Inject
-import jakarta.inject.Singleton
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 
 @Singleton

@@ -37,4 +37,5 @@ interface SurveyDao {
 
     @Query("DELETE FROM surveys WHERE id = :surveyId")
     suspend fun deleteSurvey(surveyId: String)
+
 }

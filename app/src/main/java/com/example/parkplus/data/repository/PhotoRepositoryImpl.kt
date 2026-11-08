@@ -5,9 +5,9 @@ import com.example.parkplus.data.mapper.toDomain
 import com.example.parkplus.data.mapper.toEntity
 import com.example.parkplus.domain.model.PhotoRecord
 import com.example.parkplus.domain.repository.PhotoRepository
-import jakarta.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import javax.inject.Inject
 
 
 class PhotoRepositoryImpl @Inject constructor(
@@ -29,6 +29,10 @@ class PhotoRepositoryImpl @Inject constructor(
         return photoDao.getPendingPhotos().map { photo ->
             photo.toDomain()
         }
+    }
+
+    override suspend fun markPhotoSynced(photoId: String) {
+        photoDao.markPhotoSynced(photoId)
     }
 
 }

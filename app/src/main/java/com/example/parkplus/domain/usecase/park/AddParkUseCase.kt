@@ -10,6 +10,7 @@ class AddParkUseCase @Inject constructor(
 ) {
 
     suspend operator fun invoke(park: Park) {
+
         require(park.boundary.size >= 3) {
             "A park boundary must have at least 3 points"
         }
@@ -18,6 +19,8 @@ class AddParkUseCase @Inject constructor(
             "Park name cannot be empty"
         }
 
-        repository.insertPark(park)
+        repository.insertPark(
+            park.copy(isPendingSync = true)
+        )
     }
 }
